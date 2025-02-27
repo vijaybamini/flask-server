@@ -3,37 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Data from Pico W</title>
+    <title>Sensor Data from Firebase</title>
+
+    <!-- ✅ Firebase SDK (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <style>
         body {
-            text-align: center;
             font-family: Arial, sans-serif;
-        }
-        .data-box {
-            border: 2px solid #000;
+            text-align: center;
             padding: 20px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
             display: inline-block;
-            font-size: 24px;
+            text-align: left;
         }
     </style>
-    <script>
-        function fetchData() {
-            fetch("/latest-data")
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("data-display").innerText = "Received Message: " + JSON.stringify(data["message from pico"]);
-                })
-                .catch(error => console.error("Error fetching data:", error));
-        }
-
-        setInterval(fetchData, 1000); // Update every second
-        window.onload = fetchData;
-    </script>
 </head>
 <body>
-    <h1>Live Data from Pico W</h1>
-    <div class="data-box">
-        <p id="data-display">Waiting for data...</p>
-    </div>
+    <h1>Sensor Data from Firebase</h1>
+    <pre id="sensorData">Waiting for data...</pre>
+
+    <script>
+        // ✅ Initialize Firebase Correctly (No Module Import Needed)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbdJmQj6V8qWmcxmYSFioUqdsGLM-Py0A",
+            authDomain: "dustbinmonitor-c5e71.firebaseapp.com",
+            databaseURL: "https://dustbinmonitor-c5e71-default-rtdb.firebaseio.com",
+            projectId: "dustbinmonitor-c5e71",
+            storageBucket: "dustbinmonitor-c5e71.firebasestorage.app",
+            messagingSenderId: "497012929380",
+            appId: "1:497012929380:web:b5283a71b005b30e62c071",
+            measurementId: "G-MMGRXKC6JK"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const dataRef = database.ref("/data"); // ✅ Ensure correct path
+
+        // ✅ Fetch Latest Data from Firebase
+        dataRef.on("value", (snapshot) => {
+            const data = snapshot.val();
+            console.log("Database Data:", data);  // Debugging step
+
+            if (data) {
+                // ✅ Get Latest Key
+                const latestKey = Object.keys(data)[Object.keys(data).length - 1];
+                console.log("Latest Key:", latestKey); // Debugging step
+
+                const latestMessage = data[latestKey]?.["message from pico"];
+                console.log("Latest Message:", latestMessage); // Debugging step
+
+                document.getElementById("sensorData").innerText = latestMessage || "Data format issue!";
+            } else {
+                document.getElementById("sensorData").innerText = "No data available";
+            }
+        });
+
+        // ✅ Fetch Data from Flask API (For Global Website)
+        async function fetchFlaskData() {
+            try {
+                const response = await fetch("/get-data");  // Flask endpoint
+                const data = await response.json();
+                document.getElementById("sensorData").innerText = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error("Error fetching from Flask:", error);
+            }
+        }
+
+        // Fetch from Flask every 5 seconds (For Global Website)
+        setInterval(fetchFlaskData, 5000);
+    </script>
 </body>
 </html>

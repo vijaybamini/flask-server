@@ -1,27 +1,24 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, jsonify
+import firebase_admin
+from firebase_admin import credentials, db
 
 app = Flask(__name__)
 
-# Store received data (initially empty)
-latest_data = {"message": "No data received yet"}
+# Load Firebase credentials (Download your service account JSON from Firebase Console)
+cred = credentials.Certificate("path/to/serviceAccountKey.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': "https://dustbinmonitor-c5e71-default-rtdb.firebaseio.com/"
+})
 
-# Route to receive data from Pico W
-@app.route('/data', methods=['POST'])
-def receive_data():
-    global latest_data
-    latest_data = request.get_json()  # Store received JSON data
-    print("Received data:", latest_data)
-    return jsonify({"message": "Data received successfully!"})
-
-# Route to serve the webpage
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')  # Load the webpage
+    return render_template("index.html")  # Your webpage
 
-# Route to send the latest data to the webpage
-@app.route('/latest-data')
-def get_latest_data():
-    return jsonify(latest_data)  # Send stored data as JSON
+@app.route("/get-data")
+def get_data():
+    ref = db.reference("data")  # Change to match your Firebase path
+    data = ref.get()
+    return jsonify(data)  # Return Firebase data as JSON
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)  # Accessible from mobile
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
